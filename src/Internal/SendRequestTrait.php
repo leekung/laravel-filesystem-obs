@@ -60,7 +60,7 @@ trait SendRequestTrait
         return $this->createCommonSignedUrl($args, 'v2');
     }
 
-    private function createCommonSignedUrl(array $args = [], $signature)
+    private function createCommonSignedUrl(array $args, $signature)
     {
         if (!isset($args['Method'])) {
             $obsException = new ObsException('Method param must be specified, allowed values: GET | PUT | HEAD | POST | DELETE | OPTIONS');
@@ -614,7 +614,7 @@ trait SendRequestTrait
                 }
                 $this->parseResponse($model, $request, $response, $operation);
             },
-            function (RequestException $exception) use ($model, $operation, $params, $request, $requestCount, $start) {
+            function ($exception) use ($model, $operation, $params, $request, $requestCount, $start) {
                 Log::info('http request cost ' . round(microtime(true) - $start, 3) * 1000 . ' ms');
                 $message = null;
                 if ($exception instanceof ConnectException) {

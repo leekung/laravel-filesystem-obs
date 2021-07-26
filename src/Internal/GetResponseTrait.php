@@ -4,6 +4,7 @@ namespace Obs\Internal;
 
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException;
 use Illuminate\Support\Facades\Log;
 use Obs\ObsException;
@@ -319,9 +320,9 @@ trait GetResponseTrait
         return $prefix;
     }
 
-    protected function buildException(Request $request, RequestException $exception, $message)
+    protected function buildException(Request $request, $exception, $message)
     {
-        $response = $exception->hasResponse() ? $exception->getResponse() : null;
+        $response = null;
         $obsException = new ObsException($message ? $message : $exception->getMessage());
         $obsException->setExceptionType('client');
         $obsException->setRequest($request);
@@ -332,20 +333,20 @@ trait GetResponseTrait
         }
         if ($obsException->getRequestId() === null) {
             $prefix = strcasecmp($this->signature, 'obs') === 0 ? 'x-obs-' : 'x-amz-';
-            $requestId = $response->getHeaderLine($prefix . 'request-id');
+            $requestId = $request->getHeaderLine($prefix . 'request-id');
             $obsException->setRequestId($requestId);
         }
         return $obsException;
     }
 
-    protected function parseExceptionAsync(Request $request, RequestException $exception, $message = null)
+    protected function parseExceptionAsync(Request $request, $exception, $message = null)
     {
         return $this->buildException($request, $exception, $message);
     }
 
-    protected function parseException(Model $model, Request $request, RequestException $exception, $message = null)
+    protected function parseException(Model $model, Request $request, $exception, $message = null)
     {
-        $response = $exception->hasResponse() ? $exception->getResponse() : null;
+        $response = null;
 
         if ($this->exceptionResponseMode) {
             throw $this->buildException($request, $exception, $message);
