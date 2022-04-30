@@ -26,6 +26,8 @@ trait SendRequestTrait
 
     protected $securityToken = false;
 
+    protected $debug = false;
+
     protected $endpoint = '';
 
     protected $pathStyle = false;
@@ -493,13 +495,13 @@ trait SendRequestTrait
 
         $start = microtime(true);
         if (!$async) {
-            Log::info('enter method ' . $originMethod . '...');
+            $this->log_info('enter method ' . $originMethod . '...');
             $model = new Model();
             $model['method'] = $method;
             $params = empty($args) ? [] : $args[0];
             $this->checkMimeType($method, $params);
             $this->doRequest($model, $operation, $params);
-            Log::info('obsclient cost ' . round(microtime(true) - $start, 3) * 1000 . ' ms to execute ' . $originMethod);
+            $this->log_info('obsclient cost ' . round(microtime(true) - $start, 3) * 1000 . ' ms to execute ' . $originMethod);
             unset($model['method']);
             return $model;
         } else {
@@ -509,7 +511,7 @@ trait SendRequestTrait
                 $obsException->setExceptionType('client');
                 throw $obsException;
             }
-            Log::info('enter method ' . $originMethod . '...');
+            $this->log_info('enter method ' . $originMethod . '...');
             $params = count($args) === 1 ? [] : $args[0];
             $this->checkMimeType($method, $params);
             $model = new Model();
@@ -597,7 +599,7 @@ trait SendRequestTrait
         $promise = $this->httpClient->sendAsync($request, ['stream' => $saveAsStream])->then(
             function (Response $response) use ($model, $operation, $params, $request, $start) {
 
-                Log::info('http request cost ' . round(microtime(true) - $start, 3) * 1000 . ' ms');
+                $this->log_info('http request cost ' . round(microtime(true) - $start, 3) * 1000 . ' ms');
 
                 $statusCode = $response->getStatusCode();
                 $readable = isset($params['Body']) && ($params['Body'] instanceof StreamInterface || is_resource($params['Body']));
@@ -615,7 +617,7 @@ trait SendRequestTrait
                 $this->parseResponse($model, $request, $response, $operation);
             },
             function ($exception) use ($model, $operation, $params, $request, $requestCount, $start) {
-                Log::info('http request cost ' . round(microtime(true) - $start, 3) * 1000 . ' ms');
+                $this->log_info('http request cost ' . round(microtime(true) - $start, 3) * 1000 . ' ms');
                 $message = null;
                 if ($exception instanceof ConnectException) {
                     if ($requestCount <= $this->maxRetryCount) {
@@ -666,7 +668,7 @@ trait SendRequestTrait
         }
         return $this->httpClient->sendAsync($request, ['stream' => $saveAsStream])->then(
             function (Response $response) use ($model, $operation, $params, $callback, $startAsync, $originMethod, $request, $start) {
-                Log::info('http request cost ' . round(microtime(true) - $start, 3) * 1000 . ' ms');
+                $this->log_info('http request cost ' . round(microtime(true) - $start, 3) * 1000 . ' ms');
                 $statusCode = $response->getStatusCode();
                 $readable = isset($params['Body']) && ($params['Body'] instanceof StreamInterface || is_resource($params['Body']));
                 if ($statusCode === 307 && !$readable) {
@@ -680,12 +682,12 @@ trait SendRequestTrait
                     }
                 }
                 $this->parseResponse($model, $request, $response, $operation);
-                Log::info('obsclient cost ' . round(microtime(true) - $startAsync, 3) * 1000 . ' ms to execute ' . $originMethod);
+                $this->log_info('obsclient cost ' . round(microtime(true) - $startAsync, 3) * 1000 . ' ms to execute ' . $originMethod);
                 unset($model['method']);
                 $callback(null, $model);
             },
             function (RequestException $exception) use ($model, $operation, $params, $callback, $startAsync, $originMethod, $request, $start, $requestCount) {
-                Log::info('http request cost ' . round(microtime(true) - $start, 3) * 1000 . ' ms');
+                $this->log_info('http request cost ' . round(microtime(true) - $start, 3) * 1000 . ' ms');
                 $message = null;
                 if ($exception instanceof ConnectException) {
                     if ($requestCount <= $this->maxRetryCount) {
@@ -695,9 +697,16 @@ trait SendRequestTrait
                     }
                 }
                 $obsException = $this->parseExceptionAsync($request, $exception, $message);
-                Log::info('obsclient cost ' . round(microtime(true) - $startAsync, 3) * 1000 . ' ms to execute ' . $originMethod);
+                $this->log_info('obsclient cost ' . round(microtime(true) - $startAsync, 3) * 1000 . ' ms to execute ' . $originMethod);
                 $callback($obsException, null);
             }
         );
+    }
+
+    protected function log_info(string $message, array $context = []) : void
+    {
+        if ($this->debug) {
+            Log::info($message, $context);
+        }
     }
 }

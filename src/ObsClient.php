@@ -208,6 +208,10 @@ class ObsClient
         $this->ak = strval($config['key']);
         $this->sk = strval($config['secret']);
 
+        if (isset($config['debug'])) {
+            $this->debug = boolval($config['debug']);
+        }
+
         if (isset($config['security_token'])) {
             $this->securityToken = strval($config['security_token']);
         }
